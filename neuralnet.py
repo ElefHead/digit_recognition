@@ -5,9 +5,10 @@ np.random.seed(1)
 
 class NeuralNet :
 
-    def __init__(self, layers=[200, 200, 10], activation=['elu','elu','softmax'],
-                 epochs=100, elu_alpha=1.2, batch_size=250, l2_lambda = 1e-4, momentum_gamma=0.9, epsilon=1e-8):
-        self.learning_rate = 0.001
+    def __init__(self, layers=[200, 200, 10], learning_rate = 0.001, activation=['elu','elu','softmax'],
+                 epochs=100, elu_alpha=1.2, batch_size=250, l2_lambda = 1e-4, epsilon=1e-8,
+                 beta1=0.9, beta2=0.999):
+        self.learning_rate = learning_rate
         self.epochs = epochs
         self.num_layers = len(layers)
         self.layers = layers
@@ -26,8 +27,9 @@ class NeuralNet :
         }
         self.optimizer_cache = {}
         self.l2_lambda = l2_lambda
-        self.momentum_gamma = momentum_gamma
         self.epsilon = epsilon
+        self.beta1 = beta1
+        self.beta2 = beta2
 
     def forward_pass(self, train, save_cache=False):
         cache = {
@@ -46,16 +48,17 @@ class NeuralNet :
             A = self.activate[self.activation[i]](Z)
         return (A, cache) if save_cache else (A, None)
 
-    def backpropogate_update(self, X_train, Y_train, prediction, cache):
+    def backpropogate_update(self, X_train, Y_train, prediction, cache, iter):
         batch_size = X_train.shape[0]
         d_output = self.d_categorical_cross_entropy_loss(Y_train,prediction)
-        if 'past_weights_v_t' not in self.optimizer_cache:
-            self.optimizer_cache['past_weights_v_t'] = [np.zeros_like(w) for w in self.weights]
-            self.optimizer_cache['past_bias_v_t'] = [np.zeros_like(b) for b in self.bias]
 
         if 'past_weights_sq' not in self.optimizer_cache:
             self.optimizer_cache['past_weights_sq'] = [np.zeros_like(w) for w in self.weights]         # For RMSProp
             self.optimizer_cache['past_bias_sq'] = [np.zeros_like(b) for b in self.bias]               # For RMSProp
+
+        if 'past_weights' not in self.optimizer_cache:
+            self.optimizer_cache['past_weights'] = [np.zeros_like(w) for w in self.weights]             # For Adam
+            self.optimizer_cache['past_bias'] = [np.zeros_like(b) for b in self.bias]
 
         for layer in range(len(self.layers)-1,0,-1):
             d_score = d_output*self.differentiate[self.activation[layer]](cache['scores'][layer])
@@ -65,19 +68,30 @@ class NeuralNet :
                 d_weights = np.dot(cache['inputs'][layer-1].T, d_score)/batch_size
             d_bias = np.sum(d_score, axis=0, keepdims=True)
             d_output = np.dot(d_score,self.weights[layer].T)
-            self.optimizer_cache['past_weights_sq'][layer] = self.momentum_gamma*self.optimizer_cache['past_weights_sq'][layer] + (1 - self.momentum_gamma)*(d_weights**2)
-            self.optimizer_cache['past_bias_sq'][layer] = self.momentum_gamma * \
+
+            previous_weight_sq = self.optimizer_cache['past_weights_sq'][layer].copy()
+            previous_bias_sq = self.optimizer_cache['past_bias_sq'][layer].copy()
+
+            self.optimizer_cache['past_weights_sq'][layer] = self.beta2*self.optimizer_cache['past_weights_sq'][layer] + (1 - self.beta2)*(d_weights**2)
+            self.optimizer_cache['past_bias_sq'][layer] = self.beta2 * \
                                                              self.optimizer_cache['past_bias_sq'][layer] + (
-                                                                         1 - self.momentum_gamma) * (d_bias ** 2)
-            w_learning_rate = self.learning_rate/np.sqrt(self.optimizer_cache['past_weights_sq'][layer] + self.epsilon) # RMSProp
-            b_learning_rate = self.learning_rate/np.sqrt(self.optimizer_cache['past_bias_sq'][layer]+self.epsilon) #RMSProp
-            weights_v_t = w_learning_rate*d_weights # + self.momentum_gamma*self.optimizer_cache['past_weights_v_t'][layer] # Momentum update
-            bias_v_t = b_learning_rate*d_bias #+ self.momentum_gamma*self.optimizer_cache['past_bias_v_t'][layer] # Momentum update
-            self.weights[layer] -= (weights_v_t - w_learning_rate*self.l2_lambda*self.weights[layer]) # L2 Regularization
-            self.bias[layer] -= (bias_v_t - b_learning_rate*self.l2_lambda*self.bias[layer]) # L2 Regularization
-            # Just Momentum
-            self.optimizer_cache['past_weights_v_t'][layer] = weights_v_t
-            self.optimizer_cache['past_bias_v_t'][layer] = bias_v_t
+                                                                         1 - self.beta2) * (d_bias ** 2)
+            self.optimizer_cache['past_weights'][layer] = self.beta1*self.optimizer_cache['past_weights'][layer] + (1 - self.beta1)*(d_weights) # For Adam
+            self.optimizer_cache['past_bias'][layer] = self.beta1*self.optimizer_cache['past_bias'][layer] + (1 - self.beta1)*(d_bias) # For Adam
+
+            amsprop_weights_sq = np.maximum(previous_weight_sq, self.optimizer_cache['past_weights_sq'][layer])
+            amsprop_bias_sq = np.maximum(previous_bias_sq, self.optimizer_cache['past_bias_sq'][layer])
+
+            w_first_moment = self.optimizer_cache['past_weights'][layer] / (1 - self.beta1**iter)
+            b_first_moment = self.optimizer_cache['past_bias'][layer] / (1 - self.beta1**iter)
+            w_second_moment = amsprop_weights_sq / (1. - self.beta2**iter)
+            b_second_moment = amsprop_bias_sq / (1. - self.beta2**iter)
+
+            w_learning_rate = self.learning_rate/(np.sqrt(w_second_moment) + self.epsilon)  # RMSProp
+            b_learning_rate = self.learning_rate/(np.sqrt(b_second_moment) + self.epsilon)  # RMSProp
+
+            self.weights[layer] -= w_learning_rate*w_first_moment + self.l2_lambda*self.weights[layer]# l2_regularization
+            self.bias[layer] -= b_learning_rate*b_first_moment + self.l2_lambda*self.bias[layer]  # l2_regularization
 
     def softmax_activation(self, Z):
         Z_dash = Z - Z.max()  # for numerical stability
@@ -130,12 +144,14 @@ class NeuralNet :
         shuffle_indices = np.random.permutation(X_train.shape[0])
         X_train_shuffled = X_train[shuffle_indices]
         Y_train_shuffled = Y_train[shuffle_indices]
-
+        iter = self.batch_size
         for epoch in range(self.epochs):
             for X_batch, Y_batch in self.get_batch(X_train_shuffled, Y_train_shuffled):
                 prediction, cache = self.forward_pass(X_batch, save_cache=True)
 
-                self.backpropogate_update(X_batch, Y_batch, prediction, cache)
+                self.backpropogate_update(X_batch, Y_batch, prediction, cache, iter)
+
+                iter += self.batch_size
 
             print("epoch {}: Training accuracy = {}".format(epoch+1, accuracy(self.predict(X_train), Y_train)))
 

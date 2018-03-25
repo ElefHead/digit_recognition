@@ -24,11 +24,14 @@ class NeuralNet :
             'elu': self.d_elu_activation,
             'softmax': self.d_softmax_activation
         }
+        self.momentum_cache = {}
 
     def forward_pass(self, train, save_cache=False):
         cache = {
             'scores': [],
-            'inputs': []
+            'inputs': [],
+            'past_weights': [],
+            'past_bias':[]
         }
         for i,n in enumerate(self.layers):
             if i == 0:
@@ -45,16 +48,23 @@ class NeuralNet :
     def backpropogate_update(self, X_train, Y_train, prediction, cache):
         batch_size = X_train.shape[0]
         d_output = self.d_categorical_cross_entropy_loss(Y_train,prediction)
+        if 'past_weights' not in self.momentum_cache:
+            self.momentum_cache['past_weights'] = [np.zeros_like(w) for w in self.weights]
+            self.momentum_cache['past_bias'] = [np.zeros_like(b) for b in self.bias]
+
         for layer in range(len(self.layers)-1,0,-1):
             d_score = d_output*self.differentiate[self.activation[layer]](cache['scores'][layer])
             if layer==0:
                 d_weights = np.dot(d_score, X_train.T)/batch_size
             else:
-                d_weights = np.dot(cache['inputs'][layer-1].T, d_score)/batch_size
-            d_bias = np.sum(d_score, axis=0, keepdims=True)
+                d_weights = np.dot(cache['inputs'][layer-1].T, d_score)/batch_size + 0.9*self.momentum_cache['past_weights'][layer]
+            d_bias = np.sum(d_score, axis=0, keepdims=True) + 0.9*self.momentum_cache['past_bias'][layer]
             d_output = np.dot(d_score,self.weights[layer].T)
-            self.weights[layer] -= self.learning_rate * d_weights
-            self.bias[layer] -= self.learning_rate * d_bias
+            self.weights[layer] -= (self.learning_rate * d_weights)
+            self.bias[layer] -= (self.learning_rate * d_bias)
+            # Just Momentum
+            self.momentum_cache['past_weights'][layer] = d_weights
+            self.momentum_cache['past_bias'][layer] = d_bias
 
     def softmax_activation(self, Z):
         Z_dash = Z - Z.max()  # for numerical stability
@@ -127,7 +137,8 @@ class NeuralNet :
                 if i==n_batches-1:
                     predictions[i*self.batch_size:], cache = self.forward_pass(X[i*self.batch_size:])
                 else:
-                    predictions[i * self.batch_size:(i+1)*self.batch_size], cache = self.forward_pass(X[i * self.batch_size: (i+1)*self.batch_size])
+                    predictions[i * self.batch_size:(i+1)*self.batch_size], \
+                    cache = self.forward_pass(X[i * self.batch_size: (i+1)*self.batch_size])
         return predictions
 
 
@@ -138,7 +149,7 @@ def accuracy(actual, prediction):
 def main():
     f = Filereader(path="./data/")
     X_train, Y_train, train_rows, train_cols = f.getData(sample=60000)							# init training data
-    X_test, Y_test, test_rows, test_cols = f.getData(dataset="testing", sample=5)			    # init testing data
+    X_test, Y_test, test_rows, test_cols = f.getData(dataset="testing", sample=10000)			    # init testing data
     X_train = X_train/255
     X_test = X_test/255
     print("training data shape: {}".format(X_train.shape))
@@ -146,9 +157,9 @@ def main():
 
     nn = NeuralNet()
     nn.train(X_train, Y_train)
-    nn.predict(X_test)
+    test_pred = nn.predict(X_test)
 
-    print("Final Testing Accuracy = {}".format(accuracy(X_test, Y_test)))
+    print("Final Testing Accuracy = {}".format(accuracy(Y_test, test_pred)))
 
 
 if __name__ == '__main__':

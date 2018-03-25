@@ -7,7 +7,7 @@ Fully connected neural network (tensorflow as well as pure numpy codes) for digi
 *Weight Initialization* : He-normal  
 *Regularization* : L2  
 *Activation* : ( elu, elu, softmax )  
-*Cost Function* : Categorical cross-entropy
+*Cost Function* : Categorical cross-entropy  
 *Total epochs* : 100  
 *Batch size* : 250  
 

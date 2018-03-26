@@ -141,11 +141,14 @@ class NeuralNet :
         N, M = X_train.shape
         self.weights, self.bias = self.init_weights(M)
 
-        shuffle_indices = np.random.permutation(X_train.shape[0])
-        X_train_shuffled = X_train[shuffle_indices]
-        Y_train_shuffled = Y_train[shuffle_indices]
         iter = self.batch_size
+
         for epoch in range(self.epochs):
+            shuffle_indices = np.random.permutation(X_train.shape[0])
+            X_train_shuffled = X_train[shuffle_indices]
+            Y_train_shuffled = Y_train[shuffle_indices]
+
+
             for X_batch, Y_batch in self.get_batch(X_train_shuffled, Y_train_shuffled):
                 prediction, cache = self.forward_pass(X_batch, save_cache=True)
 

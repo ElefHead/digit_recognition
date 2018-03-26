@@ -18,7 +18,7 @@ Here are some performance stats using various optimizers:
 |:--------------:|------------------:|-----------------:|
 |Momentum        | 0.586             | 0.584            |
 |RMSProp         | 0.9870            | 0.9679           |
-|AMSGrad         | 0.9913            | 0.9748           |
+|AMSGrad         | 0.9975            | 0.9743           |
 |ADAM(TensorFlow)| 0.9967            | 0.9735           |
 
 ## Notes

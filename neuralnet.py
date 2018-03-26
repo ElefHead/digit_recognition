@@ -90,8 +90,8 @@ class NeuralNet :
             w_learning_rate = self.learning_rate/(np.sqrt(w_second_moment) + self.epsilon)  # RMSProp
             b_learning_rate = self.learning_rate/(np.sqrt(b_second_moment) + self.epsilon)  # RMSProp
 
-            self.weights[layer] -= w_learning_rate*w_first_moment + self.l2_lambda*self.weights[layer]# l2_regularization
-            self.bias[layer] -= b_learning_rate*b_first_moment + self.l2_lambda*self.bias[layer]  # l2_regularization
+            self.weights[layer] -= w_learning_rate*(w_first_moment + self.l2_lambda*self.weights[layer])# l2_regularization
+            self.bias[layer] -= b_learning_rate*(b_first_moment + self.l2_lambda*self.bias[layer])  # l2_regularization
 
     def softmax_activation(self, Z):
         Z_dash = Z - Z.max()  # for numerical stability

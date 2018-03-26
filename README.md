@@ -1,5 +1,5 @@
 # MNIST Digit Recognition
-Fully connected neural network (tensorflow as well as pure numpy codes) for handwritten digit classification using [MNIST data](http://yann.lecun.com/exdb/mnist/)
+Fully connected neural networks for handwritten digit classification using [MNIST data](http://yann.lecun.com/exdb/mnist/)
 
 ## Description  
 *Layers* : 3 ( 200, 200, 10 )  

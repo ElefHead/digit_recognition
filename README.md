@@ -19,12 +19,12 @@ Here are some performance stats using various optimizers:
 |Momentum        | 0.586             | 0.584            |
 |RMSProp         | 0.9870            | 0.9679           |
 |AMSGrad         | 0.9913            | 0.9748           |
-|Adam(tensorflow)| 0.9967            | 0.9735           |
+|ADAM(TensorFlow)| 0.9967            | 0.9735           |
 
 ## Notes
 
 * All the above metrics were obtained on my numpy implementation.  
-* The latest commit has only AMSGrad, RMSProp and Momentum are present in previous commits.  
+* The latest commit has only AMSGrad. RMSProp and Momentum are present in previous commits.  
 * The tensorflow code was for me to see the kind of performance I should be replicating. It uses AdamOptimization and not AMSGrad.
 I will update the repo with a TF implementation of AMSGrad at a later stage.
 

@@ -32,5 +32,5 @@ randoms.  This point is specifically directed at my AMSGrad implementation vs Te
 ---  
 
 This was a fun exercise for me to see the impact of various optimizers and needless to say, I was absolutely blown away by
-the boost in performance caused by RMSProp and AMSGrad.
+the boost in performance caused by RMSProp and AMSGrad.  
 As another fun exercise, I have updated the repository with the tenserflow eager implementation of equivalent ADAM code.

@@ -25,9 +25,12 @@ Here are some performance stats using various optimizers:
 
 * The latest commit has only AMSGrad. RMSProp and Momentum are present in previous commits.  
 * The tensorflow code was for me to see the kind of performance I should be replicating. It uses AdamOptimization and not AMSGrad.
-I will update the repo with a TF implementation of AMSGrad at a later stage.
+* The performance stats aren't an average over x attempts, its just what I got running them once. Thus, they're not absolute or conclusive of anything and are subject to
+randoms.  This point is specifically directed at my AMSGrad implementation vs Tensorflow's ADAM.
+
 
 ---  
 
 This was a fun exercise for me to see the impact of various optimizers and needless to say, I was absolutely blown away by
-the boost in performance caused by RMSProp and AMSGrad.  
+the boost in performance caused by RMSProp and AMSGrad.
+As another fun exercise, I have updated the repository with the tenserflow eager implementation of equivalent ADAM code.
